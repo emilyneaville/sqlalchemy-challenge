@@ -41,6 +41,7 @@ def welcome():
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
+        f'/api/v1.0/start/<start>'
     )
 
 
@@ -109,6 +110,37 @@ def tobs():
     
     # Return JSON format of all temperature observations and dates
     return jsonify(all_tobs)
+
+
+# For a specified start, calculate TMIN, TAVG, and TMAX for all the dates greater than or equal to the start date.
+@app.route('/api/v1.0/start/<start>')
+def date(start):
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+    
+    # Define the start date, formatting to account for user
+    # Use .strptime to create datetime object from the user's string
+    # Format to YYYY mm DD
+    user_start = dt.datetime.strptime(start, "%Y-%m-%d").date()
+    
+    # Define our SELECT statement for the temperature observations from the entire measurement table
+    sel = [func.min(measurement.tobs),
+           func.avg(measurement.tobs),
+           func.max(measurement.tobs)]
+    
+    # Now we want to query the results based off of the user's specified date
+    start_query = session.query(*sel).filter(measurement.date >= start).all()
+    
+    # Close the session
+    session.close()
+
+    # Our results returns a list of the [(low, avg, high)], use
+    return_dict = {'min': start_query[0][0],
+                   'avg': start_query[0][1],
+                   'max': start_query[0][2]}
+    
+    # Return a JSON file of the results
+    return jsonify (return_dict)
 
 
 if __name__ == '__main__':
