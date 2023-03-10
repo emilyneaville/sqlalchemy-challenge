@@ -35,13 +35,14 @@ app = Flask(__name__)
 
 @app.route("/")
 def welcome():
-    """List all available api routes."""
+    # List all available API routes
     return (
         f"Available Routes:<br/>"
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f'/api/v1.0/start/<start>'
+        f"/api/v1.0/start/<start><br/>"
+        f"/api/v1.0/start-end/<start>/<end>"
     )
 
 
@@ -114,13 +115,13 @@ def tobs():
 
 # For a specified start, calculate TMIN, TAVG, and TMAX for all the dates greater than or equal to the start date.
 @app.route('/api/v1.0/start/<start>')
-def date(start):
+def start_date(start):
     # Create our session (link) from Python to the DB
     session = Session(engine)
     
     # Define the start date, formatting to account for user
     # Use .strptime to create datetime object from the user's string
-    # Format to YYYY mm DD
+    # Format to YYYY MM DD
     user_start = dt.datetime.strptime(start, "%Y-%m-%d").date()
     
     # Define our SELECT statement for the temperature observations from the entire measurement table
@@ -129,12 +130,12 @@ def date(start):
            func.max(measurement.tobs)]
     
     # Now we want to query the results based off of the user's specified date
-    start_query = session.query(*sel).filter(measurement.date >= start).all()
+    start_query = session.query(*sel).filter(measurement.date >= user_start).all()
     
     # Close the session
     session.close()
 
-    # Our results returns a list of the [(low, avg, high)], use
+    # Our results returns a list of the [(low, avg, high)], use index to grab values from list
     return_dict = {'min': start_query[0][0],
                    'avg': start_query[0][1],
                    'max': start_query[0][2]}
@@ -143,5 +144,39 @@ def date(start):
     return jsonify (return_dict)
 
 
+# For a specified start, calculate TMIN, TAVG, and TMAX for all the user's specified start and end dates
+@app.route('/api/v1.0/start-end/<start>/<end>')
+def start_end_date(start, end):
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+    
+    # Define the start and end dates, formatting to account for user
+    # Use .strptime to create datetime object from the user's string
+    # Format to YYYY MM DD
+    user_start = dt.datetime.strptime(start, "%Y-%m-%d").date()
+    user_end = dt.datetime.strptime(end, "%Y-%m-%d").date()
+    
+    # Define our SELECT statement for the temperature observations from the entire measurement table
+    sel = [func.min(measurement.tobs),
+           func.avg(measurement.tobs),
+           func.max(measurement.tobs)]
+    
+    # Now we want to query the results based off of user_start and user_end
+    start_end_query = session.query(*sel).\
+                    filter(measurement.date >= user_start).\
+                    filter(measurement.date >= user_end).all()
+    
+    # Close the session
+    session.close()
+
+    # Our results returns a list of the [(low, avg, high)], use index to grab values from list
+    return_dict = {'min': start_end_query[0][0],
+                   'avg': start_end_query[0][1],
+                   'max': start_end_query[0][2]}
+    
+    # Return a JSON file of the results
+    return jsonify (return_dict)
+
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=8000, debug=True)
