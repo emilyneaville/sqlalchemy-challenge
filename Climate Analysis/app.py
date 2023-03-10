@@ -15,7 +15,6 @@ import numpy as np
 engine = create_engine('sqlite:///../Resources/hawaii.sqlite')
 
 # reflect an existing database into a new model:
-# Instatiate the 'Base' object
 Base = automap_base() # Instatiate the 'Base' object
 # reflect the tables
 Base.prepare(autoload_with=engine)
@@ -40,7 +39,8 @@ def welcome():
     return (
         f"Available Routes:<br/>"
         f"/api/v1.0/precipitation<br/>"
-        f"/api/v1.0/stations"
+        f"/api/v1.0/stations<br/>"
+        f"/api/v1.0/tobs<br/>"
     )
 
 
@@ -84,6 +84,31 @@ def stations():
     
     # Return list of all stations in JSON format
     return jsonify(all_stations)
+
+
+@app.route('/api/v1.0/tobs')
+def tobs():
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+     
+    # Query the dates and temperature observations of the most-active station for the previous year of data
+    tobs_results = session.query(measurement.date, measurement.tobs).\
+                                filter(measurement.date >= dt.date(2016, 8, 23)).\
+                                filter(measurement.station == 'USC00519281').all()
+    
+    # Close the session
+    session.close()
+    
+    # Return a JSON list of temperature observations for the previous year.
+    all_tobs = []
+    for date, tob in tobs_results:
+        tobs_dict = {}
+        tobs_dict['date'] = date
+        tobs_dict['tobs'] = tob
+        all_tobs.append(tobs_dict)
+    
+    # Return JSON format of all temperature observations and dates
+    return jsonify(all_tobs)
 
 
 if __name__ == '__main__':
