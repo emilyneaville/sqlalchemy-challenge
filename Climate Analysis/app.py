@@ -33,6 +33,15 @@ app = Flask(__name__)
 # Flask Routes
 #################################################
 
+@app.route("/")
+def welcome():
+    """List all available api routes."""
+    return (
+        f"Available Routes:<br/>"
+        f"/api/v1.0/precipitation<br/>"
+    )
+
+
 @app.route('/api/v1.0/precipitation')
 def precipitation():
     # Create our session (link) from Python to the DB
